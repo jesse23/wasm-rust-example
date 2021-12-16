@@ -1,5 +1,7 @@
 mod utils;
 
+use fixedbitset::FixedBitSet;
+use rand::Rng;
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -22,7 +24,7 @@ pub enum Cell {
 pub struct Universe {
     width: u32,
     height: u32,
-    cells: Vec<Cell>,
+    cells: FixedBitSet,
 }
 
 impl Universe {
@@ -54,7 +56,7 @@ impl fmt::Display for Universe {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for line in self.cells.as_slice().chunks(self.width as usize) {
             for &cell in line {
-                let symbol = if cell == Cell::Dead { '◻' } else { '◼' };
+                let symbol = if cell == 0 { '◻' } else { '◼' };
                 write!(f, "{}", symbol)?;
             }
             write!(f, "\n")?;
@@ -69,16 +71,12 @@ impl Universe {
     pub fn new() -> Universe {
         let width = 64;
         let height = 64;
+        let size = (width * height) as usize;
+        let mut cells = FixedBitSet::with_capacity(size);
 
-        let cells = (0..width * height)
-            .map(|i| {
-                if i % 2 == 0 || i % 7 == 0 {
-                    Cell::Alive
-                } else {
-                    Cell::Dead
-                }
-            })
-            .collect();
+        for i in 0..size {
+            cells.set(i, js_sys::Math::random() * 100.0 > 49.0);
+        }
 
         Universe {
             width,
@@ -99,8 +97,8 @@ impl Universe {
         self.height
     }
 
-    pub fn cells(&self) -> *const Cell {
-        self.cells.as_ptr()
+    pub fn cells(&self) -> *const u32 {
+        self.cells.as_slice().as_ptr()
     }
 
     pub fn tick(&mut self) {
@@ -112,6 +110,18 @@ impl Universe {
                 let cell = self.cells[idx];
                 let live_neighbors = self.live_neighbor_count(row, col);
 
+                next.set(
+                    idx,
+                    match (cell, live_neighbors) {
+                        (true, x) if x < 2 => false,
+                        (true, 2) | (true, 3) => true,
+                        (true, x) if x > 3 => false,
+                        (false, 3) => true,
+                        (otherwise, _) => otherwise,
+                    },
+                );
+
+                /*
                 let next_cell = match (cell, live_neighbors) {
                     // Rule 1: Any live cell with fewer than two live neighbours
                     // dies, as if caused by underpopulation.
@@ -130,6 +140,7 @@ impl Universe {
                 };
 
                 next[idx] = next_cell;
+                */
             }
         }
         self.cells = next;
