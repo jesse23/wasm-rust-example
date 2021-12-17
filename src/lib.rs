@@ -1,5 +1,6 @@
 mod utils;
 
+use utils::logger;
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -16,6 +17,15 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 pub enum Cell {
     Dead = 0,
     Alive = 1,
+}
+
+impl Cell {
+    fn toggle(&mut self) {
+        *self = match *self {
+            Cell::Dead => Cell::Alive,
+            Cell::Alive => Cell::Dead,
+        };
+    }
 }
 
 #[wasm_bindgen]
@@ -83,6 +93,7 @@ impl Universe {
 #[wasm_bindgen]
 impl Universe {
     pub fn new() -> Universe {
+        utils::set_panic_hook();
         let width = 64;
         let height = 64;
 
@@ -95,6 +106,8 @@ impl Universe {
                 }
             })
             .collect();
+
+        log!("Univers created at {} * {}", width, height);
 
         Universe {
             width,
@@ -165,5 +178,10 @@ impl Universe {
             }
         }
         self.cells = next;
+    }
+
+    pub fn toggle_cell(&mut self, row: u32, column: u32) {
+        let idx = self.get_index(row, column);
+        self.cells[idx].toggle();
     }
 }
