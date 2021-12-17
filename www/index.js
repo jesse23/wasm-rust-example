@@ -122,9 +122,9 @@ const drawCells = () => {
     for (let col = 0; col < width; col++) {
       const idx = getIndex(row, col);
 
-      ctx.fillStyle = cells[idx] === DEAD
-        ? DEAD_COLOR
-        : ALIVE_COLOR;
+      ctx.fillStyle = cells[idx]        
+        ? ALIVE_COLOR
+        : DEAD_COLOR;
 
       ctx.fillRect(
         col * (CELL_SIZE + 1) + 1,
